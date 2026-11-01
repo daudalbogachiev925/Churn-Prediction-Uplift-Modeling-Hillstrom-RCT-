@@ -100,3 +100,33 @@ addopts = "-q"
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+Как запустить (полная последовательность)
+# 1. Установка
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+
+# 2. Скачать Hillstrom RCT (~64000 строк, ~3 MB)
+python scripts/download_data.py
+#  → data/processed/hillstrom_clean.parquet
+
+# 3. Обучение churn + uplift (T-Learner vs X-Learner по Qini) + бюджетирование
+python scripts/train.py
+#  → artifacts/models.pkl, metadata.pkl, qini.parquet
+
+# 4. Тесты
+pytest -q
+
+# 5. Поднять API
+./scripts/serve.sh
+#  → http://localhost:8000/docs
+
+# 6. Проверить эндпоинты
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"recency":12,"history":100,"mens":1,"womens":0,"zip_code":"Urban","newbie":0,"channel":"Web"}'
+
+curl "http://localhost:8000/qini"
+curl "http://localhost:8000/model-info"
+
+# 7. Docker
+docker compose up --build
